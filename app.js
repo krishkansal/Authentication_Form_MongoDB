@@ -4,7 +4,7 @@ const bodyParser = require("body-parser")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const auth = require("./moddleware/auth");
+const auth = require("./middleware/auth");
 require("./DB/conn");
 const data=require("./model/signup")
 const app=express()
