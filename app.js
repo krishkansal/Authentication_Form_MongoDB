@@ -1,7 +1,10 @@
+require("dotenv").config();
 const express=require("express")
 const bodyParser = require("body-parser")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const auth = require("./moddleware/auth");
 require("./DB/conn");
 const data=require("./model/signup")
 const app=express()
@@ -9,21 +12,53 @@ const port=3000 || process.env.PORT
 
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(bodyParser.json())
+//middleware
 app.use(express.static('public'))
 app.use(bodyParser.urlencoded({
     extended:true
 }))
 
+console.log(process.env.SECRET_KEY);
+
+//routing
 app.get('/',(req,res)=>{
     
-    res.send("Home page")
+    res.redirect("home.html")
+
+})
+
+app.get('/secret', auth,(req,res)=>{
+//    console.log(`this is the cookie awesome ${req.cookies.jwt}`);
+    res.redirect("secret.html");
+
+})
+
+app.get('/logout',auth,async(req,res)=>{
+    try{
+
+                                //Logout from single device
+        req.user.tokens=req.user.tokens.filter((currElem)=>{
+            return currElem.token != req.token
+        })
+
+                                //Logout from all the devices
+        // req.user.tokens=[];
+
+        res.clearCookie("jwt")
+        console.log("logout successfully");
+        await req.user.save();
+        res.redirect("login.html");
+    }catch(error){
+        res.status(500).send(error);
+    }
 
 })
 
 
 app.get('/login',(req,res)=>{
-    
+  
     return res.redirect("login.html");
 
 })
@@ -41,8 +76,16 @@ app.post('/login',async (req,res)=>{
 
         const matchpassword = await bcrypt.compare(Password,useremail.password);
 
+        const token=await useremail.generateAuthToken(); 
+        console.log("the token of login part " + token);
+
+        res.cookie("jwt",token,{
+            expires:new Date(Date.now()+ 600000),
+            httpOnly:true
+        });
+
         if(matchpassword){
-            res.status(201).send("Home page");
+            res.status(201).redirect("home.html");
         }else{
             res.send("Invalid Login Details");
         }
@@ -69,7 +112,7 @@ app.post('/signup',async (req,res)=>{
         const password=req.body.password;
         const cpassword=req.body.cpassword;
 
-        if(password===cpassword){
+         if(password===cpassword){
 
             const signupdata=new data({
                 name:req.body.name,
@@ -79,14 +122,20 @@ app.post('/signup',async (req,res)=>{
                 cpassword:req.body.cpassword
 
             })
-            console.log("the success part" + signupdata);
+            console.log("the success part " + signupdata);
 
             const token=await signupdata.generateAuthToken(); 
-            console.log("the token part" + token);
+            console.log("the token of signup part " + token);
+
+            res.cookie("jwt",token,{
+                expires:new Date(Date.now()+ 600000),
+                httpOnly:true
+            });
+            console.log(cookie);
 
             const registered =await signupdata.save();
-            console.log("the page part" + registered);
-            res.status(201).send("home page")
+            console.log("the page part " + registered);
+            res.status(201).send("home page");
 
         }else{
             res.send("password are not matching")
