@@ -217,6 +217,9 @@ app.post('/signup',async (req,res)=>{
 // }
 
 // createToken();
+app.use((req,res)=>{
+    return res.status(200).json({msg:"welcome"})
+})
 
 app.listen(port,()=>{
     console.log("connection setup");
